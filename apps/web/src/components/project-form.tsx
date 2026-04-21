@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { env } from "../lib/env";
 import type { ProjectRuntime } from "../types/project";
 
 const runtimes: ProjectRuntime[] = ["node", "python"];
@@ -12,9 +13,68 @@ export function ProjectForm() {
   const [startCommand, setStartCommand] = useState("");
   const [port, setPort] = useState("4010");
   const [description, setDescription] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resultMessage, setResultMessage] = useState("");
+
+  const handleSubmit = async () => {
+    if (!file) {
+      setResultMessage("Bitte ZIP-Datei auswählen.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setResultMessage("");
+
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("slug", slug);
+      formData.append("runtime", runtime);
+      formData.append("entryFile", entryFile);
+      formData.append("installCommand", installCommand);
+      formData.append("startCommand", startCommand);
+      formData.append("port", port);
+      formData.append("description", description);
+      formData.append("file", file);
+
+      const response = await fetch(`${env.apiUrl}/projects`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setResultMessage(data.error || "Projekt konnte nicht erstellt werden.");
+        return;
+      }
+
+      setResultMessage(`Projekt erstellt: ${data.project.name}`);
+      setName("");
+      setSlug("");
+      setRuntime("node");
+      setEntryFile("");
+      setInstallCommand("");
+      setStartCommand("");
+      setPort("4010");
+      setDescription("");
+      setFile(null);
+    } catch {
+      setResultMessage("Fehler beim Hochladen des Projekts.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <form className="space-y-5">
+    <form
+      className="space-y-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void handleSubmit();
+      }}
+    >
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-medium text-zinc-300">
@@ -125,27 +185,32 @@ export function ProjectForm() {
 
       <div>
         <label className="mb-2 block text-sm font-medium text-zinc-300">
-          Projektdateien
+          Projektdateien als ZIP
         </label>
         <input
           type="file"
+          accept=".zip"
+          onChange={(event) => {
+            const nextFile = event.target.files?.[0] || null;
+            setFile(nextFile);
+          }}
           className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400 file:mr-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-100"
         />
       </div>
 
+      {resultMessage ? (
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+          {resultMessage}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-3">
         <button
-          type="button"
-          className="rounded-2xl bg-zinc-50 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-2xl bg-zinc-50 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Projekt erstellen
-        </button>
-
-        <button
-          type="button"
-          className="rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-700"
-        >
-          Nur speichern
+          {isSubmitting ? "Wird erstellt..." : "Projekt erstellen"}
         </button>
       </div>
     </form>

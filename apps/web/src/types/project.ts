@@ -13,4 +13,7 @@ export interface ProjectItem {
   status: ProjectStatus;
   description: string;
   createdAt: string;
+  projectPath?: string;
+  archivePath?: string;
+  pid?: number;
 }

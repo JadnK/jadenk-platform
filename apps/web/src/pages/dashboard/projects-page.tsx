@@ -1,9 +1,52 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "../../components/card";
 import { ProjectCard } from "../../components/project-card";
-import { mockProjects } from "../../data/mock-projects";
+import { apiGet, apiPost } from "../../lib/api";
+import type { ProjectItem } from "../../types/project";
+
+type ProjectsResponse = {
+  projects: ProjectItem[];
+};
+
+type StartProjectResponse = {
+  message: string;
+  pid?: number;
+};
 
 export function ProjectsPage() {
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [error, setError] = useState("");
+  const [startingProjectId, setStartingProjectId] = useState<string | null>(null);
+
+  const loadProjects = async () => {
+    try {
+      const data = await apiGet<ProjectsResponse>("/projects");
+      setProjects(data.projects);
+      setError("");
+    } catch {
+      setError("Projekte konnten nicht geladen werden.");
+    }
+  };
+
+  useEffect(() => {
+    void loadProjects();
+  }, []);
+
+  const handleStart = async (projectId: string) => {
+    try {
+      setStartingProjectId(projectId);
+      await apiPost<StartProjectResponse>(`/projects/${projectId}/start`);
+      await loadProjects();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Projekt konnte nicht gestartet werden.";
+      setError(message);
+    } finally {
+      setStartingProjectId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -27,29 +70,33 @@ export function ProjectsPage() {
         </Link>
       </div>
 
+      {error ? (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-4">
         <Card title="Gesamt">
-          <p className="text-3xl font-semibold text-zinc-50">
-            {mockProjects.length}
-          </p>
+          <p className="text-3xl font-semibold text-zinc-50">{projects.length}</p>
         </Card>
 
         <Card title="Running">
           <p className="text-3xl font-semibold text-zinc-50">
-            {mockProjects.filter((project) => project.status === "running").length}
+            {projects.filter((project) => project.status === "running").length}
           </p>
         </Card>
 
         <Card title="Stopped">
           <p className="text-3xl font-semibold text-zinc-50">
-            {mockProjects.filter((project) => project.status === "stopped").length}
+            {projects.filter((project) => project.status === "stopped").length}
           </p>
         </Card>
 
         <Card title="Building / Failed">
           <p className="text-3xl font-semibold text-zinc-50">
             {
-              mockProjects.filter(
+              projects.filter(
                 (project) =>
                   project.status === "building" || project.status === "failed",
               ).length
@@ -59,10 +106,21 @@ export function ProjectsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        {mockProjects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
+        {projects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            onStart={handleStart}
+            isStarting={startingProjectId === project.id}
+          />
         ))}
       </div>
+
+      {!projects.length && !error ? (
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-6 text-sm text-zinc-400">
+          Noch keine Projekte vorhanden.
+        </div>
+      ) : null}
     </div>
   );
 }

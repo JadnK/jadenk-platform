@@ -1,12 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "./layouts/dashboard-layout";
+import { DeploymentsPage } from "./pages/dashboard/deployments-page";
 import { LogsPage } from "./pages/dashboard/logs-page";
 import { OverviewPage } from "./pages/dashboard/overview-page";
 import { ProjectsPage } from "./pages/dashboard/projects-page";
 import { NewProjectPage } from "./pages/dashboard/projects/new-project-page";
 import { SettingsPage } from "./pages/dashboard/settings-page";
 import { LoginPage } from "./pages/login-page";
-import { KeysPage } from "./pages/dashboard/keys-page";
 
 export default function App() {
   return (
@@ -44,7 +44,7 @@ export default function App() {
         path="/dashboard/deployments"
         element={
           <DashboardLayout>
-            <KeysPage />
+            <DeploymentsPage />
           </DashboardLayout>
         }
       />

@@ -13,6 +13,7 @@ export interface ProjectRecord {
   status: ProjectStatus;
   description: string;
   projectPath: string;
+  archivePath: string;
   pid?: number;
   createdAt: string;
 }

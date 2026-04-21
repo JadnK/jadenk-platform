@@ -1,12 +1,19 @@
+import { Link } from "react-router-dom";
 import { RuntimeBadge } from "./runtime-badge";
 import { StatusBadge } from "./status-badge";
 import type { ProjectItem } from "../types/project";
 
 interface ProjectCardProps {
   project: ProjectItem;
+  onStart?: (projectId: string) => void;
+  isStarting?: boolean;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  onStart,
+  isStarting = false,
+}: ProjectCardProps) {
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-zinc-700">
       <div className="flex items-start justify-between gap-4">
@@ -29,6 +36,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300">
           Port {project.port}
         </span>
+        {project.pid ? (
+          <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300">
+            PID {project.pid}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-5 space-y-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4">
@@ -49,6 +61,24 @@ export function ProjectCard({ project }: ProjectCardProps) {
             {project.entryFile}
           </p>
         </div>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => onStart?.(project.id)}
+          disabled={isStarting}
+          className="rounded-xl bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isStarting ? "Startet..." : "Starten"}
+        </button>
+
+        <Link
+          to={`/dashboard/deployments?projectId=${project.id}`}
+          className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-700"
+        >
+          Logs ansehen
+        </Link>
       </div>
     </div>
   );

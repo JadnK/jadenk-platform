@@ -1,5 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
+import { projectRoutes } from "./routes/projects";
 
 const app = Fastify({
   logger: true,
@@ -9,6 +11,8 @@ await app.register(cors, {
   origin: true,
   credentials: true,
 });
+
+await app.register(multipart);
 
 app.get("/health", async () => {
   return {
@@ -21,6 +25,10 @@ app.get("/api/hello", async () => {
   return {
     message: "Hallo von der API 👋",
   };
+});
+
+await app.register(projectRoutes, {
+  prefix: "/projects",
 });
 
 const start = async () => {

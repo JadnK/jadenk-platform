@@ -11,3 +11,9 @@ generated
 apps/web/node_modules
 apps/api/node_modules
 packages/shared/node_modules
+runtime/uploads/*
+runtime/projects/*
+runtime/logs/*
+!runtime/uploads/.gitkeep
+!runtime/projects/.gitkeep
+!runtime/logs/.gitkeep
