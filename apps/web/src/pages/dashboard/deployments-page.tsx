@@ -39,23 +39,6 @@ export function DeploymentsPage() {
   }, [selectedProjectId, setSearchParams]);
 
   useEffect(() => {
-    if (!selectedProjectId) return;
-
-    const interval = window.setInterval(() => {
-        void (async () => {
-        try {
-            const data = await apiGet<LogsResponse>(`/projects/${selectedProjectId}/logs`);
-            setLogs(data.logs || "");
-        } catch {
-            // still bleiben
-        }
-        })();
-    }, 2000);
-
-    return () => window.clearInterval(interval);
-    }, [selectedProjectId]);
-
-  useEffect(() => {
     const loadLogs = async () => {
       if (!selectedProjectId) return;
 
@@ -72,6 +55,26 @@ export function DeploymentsPage() {
     };
 
     void loadLogs();
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    const interval = window.setInterval(() => {
+      void (async () => {
+        try {
+          const data = await apiGet<LogsResponse>(`/projects/${selectedProjectId}/logs`);
+          setLogs(data.logs || "");
+
+          const projectData = await apiGet<ProjectsResponse>("/projects");
+          setProjects(projectData.projects);
+        } catch {
+          // absichtlich still
+        }
+      })();
+    }, 2000);
+
+    return () => window.clearInterval(interval);
   }, [selectedProjectId]);
 
   const selectedProject =

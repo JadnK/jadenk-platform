@@ -8,6 +8,11 @@ import { createProjectId, normalizeSlug } from "../lib/project-utils";
 import type { ProjectRecord, ProjectRuntime } from "../types/project";
 import { startProjectProcess } from "../runtime/process-manager";
 import { runCommand } from "../runtime/command-runner";
+import {
+  getRunningProcess,
+  startProjectProcess,
+  stopProjectProcess,
+} from "../runtime/process-manager";
 
 export async function projectRoutes(app: FastifyInstance) {
   app.get("/", async () => {
@@ -159,59 +164,67 @@ export async function projectRoutes(app: FastifyInstance) {
     const project = projects.find((p) => p.id === id);
 
     if (!project) {
-        return reply.status(404).send({ error: "Projekt nicht gefunden" });
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
     }
 
-    if (project.status === "running") {
-        return reply.status(409).send({
+    const existing = getRunningProcess(project.id);
+    if (existing) {
+      return reply.status(409).send({
         error: "Projekt läuft bereits",
-        });
+      });
     }
 
     const logPath = path.join(runtimePaths.logsRoot, `${project.id}.log`);
 
     try {
-        await ensureDir(runtimePaths.logsRoot);
-        await fs.promises.writeFile(
+      await ensureDir(runtimePaths.logsRoot);
+      await fs.promises.writeFile(
         logPath,
         `\n[START] project=${project.name} (${project.id})\n`,
         { flag: "a" },
-        );
+      );
 
-        project.status = "building";
+      project.status = "building";
 
-        if (project.installCommand.trim()) {
+      if (project.installCommand.trim()) {
         await runCommand(project.installCommand, project.projectPath, logPath);
-        }
+      }
 
-        const child = startProjectProcess(
+      const child = startProjectProcess(
         project.id,
         project.startCommand,
         project.projectPath,
         project.port,
-        );
+        (projectId, exitCode) => {
+          const currentProject = projects.find((p) => p.id === projectId);
+          if (!currentProject) return;
 
-        project.pid = child.pid;
-        project.status = "running";
+          currentProject.pid = undefined;
+          currentProject.status = exitCode === 0 ? "stopped" : "failed";
+        },
+      );
 
-        return {
+      project.pid = child.pid;
+      project.status = "running";
+
+      return {
         message: "Projekt gestartet",
         pid: child.pid,
-        };
+      };
     } catch (err) {
-        project.status = "failed";
+      project.status = "failed";
 
-        await fs.promises.writeFile(
+      await fs.promises.writeFile(
         logPath,
         `\n[START_FAILED] ${
-            err instanceof Error ? err.message : "Unknown error"
+          err instanceof Error ? err.message : "Unknown error"
         }\n`,
         { flag: "a" },
-        );
+      );
 
-        return reply.status(500).send({
+      return reply.status(500).send({
         error: err instanceof Error ? err.message : "Start fehlgeschlagen",
-        });
+      });
     }
-    });
+  });
 }

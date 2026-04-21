@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { runtimePaths } from "../lib/runtime-paths";
 
+type OnProjectExit = (projectId: string, exitCode: number | null) => void;
+
 const runningProcesses = new Map<string, ChildProcess>();
 
 export function startProjectProcess(
@@ -10,9 +12,12 @@ export function startProjectProcess(
   command: string,
   cwd: string,
   port: number,
+  onExit?: OnProjectExit,
 ) {
   const logPath = path.join(runtimePaths.logsRoot, `${projectId}.log`);
   const logStream = fs.createWriteStream(logPath, { flags: "a" });
+
+  logStream.write(`\n[INFO] Starting project on PORT=${port}\n`);
 
   const child = spawn(command, {
     cwd,
@@ -31,8 +36,14 @@ export function startProjectProcess(
     logStream.write(`[ERR] ${data}`);
   });
 
+  child.on("error", (error) => {
+    logStream.write(`[PROCESS_ERROR] ${String(error)}\n`);
+  });
+
   child.on("close", (code) => {
     logStream.write(`\n[EXIT] code=${code}\n`);
+    runningProcesses.delete(projectId);
+    onExit?.(projectId, code);
   });
 
   runningProcesses.set(projectId, child);
@@ -43,9 +54,15 @@ export function startProjectProcess(
 export function stopProjectProcess(projectId: string) {
   const child = runningProcesses.get(projectId);
 
-  if (!child) return false;
+  if (!child) {
+    return false;
+  }
 
   child.kill();
   runningProcesses.delete(projectId);
   return true;
+}
+
+export function getRunningProcess(projectId: string) {
+  return runningProcesses.get(projectId) || null;
 }

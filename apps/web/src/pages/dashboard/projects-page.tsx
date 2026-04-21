@@ -9,15 +9,22 @@ type ProjectsResponse = {
   projects: ProjectItem[];
 };
 
-type StartProjectResponse = {
+type RuntimeActionResponse = {
   message: string;
   pid?: number;
 };
 
+type ActiveAction =
+  | {
+      projectId: string;
+      type: "start" | "stop" | "restart";
+    }
+  | null;
+
 export function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [error, setError] = useState("");
-  const [startingProjectId, setStartingProjectId] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<ActiveAction>(null);
 
   const loadProjects = async () => {
     try {
@@ -33,17 +40,20 @@ export function ProjectsPage() {
     void loadProjects();
   }, []);
 
-  const handleStart = async (projectId: string) => {
+  const runAction = async (
+    projectId: string,
+    type: "start" | "stop" | "restart",
+  ) => {
     try {
-      setStartingProjectId(projectId);
-      await apiPost<StartProjectResponse>(`/projects/${projectId}/start`);
+      setActiveAction({ projectId, type });
+      await apiPost<RuntimeActionResponse>(`/projects/${projectId}/${type}`);
       await loadProjects();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Projekt konnte nicht gestartet werden.";
+        err instanceof Error ? err.message : "Aktion fehlgeschlagen.";
       setError(message);
     } finally {
-      setStartingProjectId(null);
+      setActiveAction(null);
     }
   };
 
@@ -110,8 +120,10 @@ export function ProjectsPage() {
           <ProjectCard
             key={project.id}
             project={project}
-            onStart={handleStart}
-            isStarting={startingProjectId === project.id}
+            onStart={(projectId) => void runAction(projectId, "start")}
+            onStop={(projectId) => void runAction(projectId, "stop")}
+            onRestart={(projectId) => void runAction(projectId, "restart")}
+            activeAction={activeAction}
           />
         ))}
       </div>

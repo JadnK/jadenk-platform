@@ -6,14 +6,28 @@ import type { ProjectItem } from "../types/project";
 interface ProjectCardProps {
   project: ProjectItem;
   onStart?: (projectId: string) => void;
-  isStarting?: boolean;
+  onStop?: (projectId: string) => void;
+  onRestart?: (projectId: string) => void;
+  activeAction?: {
+    projectId: string;
+    type: "start" | "stop" | "restart";
+  } | null;
 }
 
 export function ProjectCard({
   project,
   onStart,
-  isStarting = false,
+  onStop,
+  onRestart,
+  activeAction = null,
 }: ProjectCardProps) {
+  const isStarting =
+    activeAction?.projectId === project.id && activeAction.type === "start";
+  const isStopping =
+    activeAction?.projectId === project.id && activeAction.type === "stop";
+  const isRestarting =
+    activeAction?.projectId === project.id && activeAction.type === "restart";
+
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-zinc-700">
       <div className="flex items-start justify-between gap-4">
@@ -41,6 +55,7 @@ export function ProjectCard({
             PID {project.pid}
           </span>
         ) : null}
+        
       </div>
 
       <div className="mt-5 space-y-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4">
@@ -67,10 +82,28 @@ export function ProjectCard({
         <button
           type="button"
           onClick={() => onStart?.(project.id)}
-          disabled={isStarting}
+          disabled={isStarting || project.status === "running"}
           className="rounded-xl bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isStarting ? "Startet..." : "Starten"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStop?.(project.id)}
+          disabled={isStopping || project.status !== "running"}
+          className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isStopping ? "Stoppt..." : "Stoppen"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onRestart?.(project.id)}
+          disabled={isRestarting}
+          className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isRestarting ? "Restart..." : "Restart"}
         </button>
 
         <Link
