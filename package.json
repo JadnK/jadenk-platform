@@ -1,0 +1,12 @@
+{
+  "name": "jadenk-platform",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev"
+  }
+}
