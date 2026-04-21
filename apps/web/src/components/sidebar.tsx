@@ -10,7 +10,7 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
+    <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r border-zinc-800 bg-zinc-950 sticky top-0 h-screen">
       <div className="border-b border-zinc-800 px-6 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.22em] text-zinc-500">
           Jadenk
