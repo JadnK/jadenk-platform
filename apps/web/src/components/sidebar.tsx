@@ -1,9 +1,9 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 const navItems = [
   { to: "/dashboard", label: "Übersicht" },
-  { to: "/dashboard/services", label: "Services" },
-  { to: "/dashboard/keys", label: "API Keys" },
+  { to: "/dashboard/projects", label: "Projects" },
+  { to: "/dashboard/deployments", label: "Deployments" },
   { to: "/dashboard/logs", label: "Logs" },
   { to: "/dashboard/settings", label: "Settings" },
 ];
@@ -45,10 +45,16 @@ export function Sidebar() {
 
       <div className="border-t border-zinc-800 p-4">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-          <p className="text-sm font-medium text-zinc-100">System</p>
           <p className="mt-1 text-sm text-zinc-400">
-            Admin panel for api.jadenk.de
+        Lade ein neues API-Projekt hoch und deploye es direkt.
           </p>
+
+            <Link
+            to="/dashboard/projects/new"
+            className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
+            >
+            Neues Projekt
+            </Link>
         </div>
       </div>
     </aside>
