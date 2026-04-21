@@ -58,6 +58,15 @@ export function ProjectCard({
         
       </div>
 
+      <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
+        <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+          Public URL
+        </p>
+        <p className="mt-2 break-all text-sm text-zinc-300">
+          http://localhost:4000/v1/{project.slug}
+        </p>
+      </div>
+
       <div className="mt-5 space-y-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4">
         <div>
           <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">

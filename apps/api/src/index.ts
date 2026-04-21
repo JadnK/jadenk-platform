@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import { proxyRoutes } from "./routes/proxy";
 import { projectRoutes } from "./routes/projects";
 
 const app = Fastify({
@@ -30,6 +31,8 @@ app.get("/api/hello", async () => {
 await app.register(projectRoutes, {
   prefix: "/projects",
 });
+
+await app.register(proxyRoutes);
 
 const start = async () => {
   try {
