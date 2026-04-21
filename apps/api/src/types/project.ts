@@ -1,6 +1,16 @@
 export type ProjectRuntime = "node" | "python";
 export type ProjectStatus = "running" | "stopped" | "building" | "failed";
 
+export interface ProjectApiKey {
+  id: string;
+  name: string;
+  keyPreview: string;
+  keyHash: string;
+  createdAt: string;
+  revokedAt?: string;
+  lastUsedAt?: string;
+}
+
 export interface ProjectRecord {
   id: string;
   name: string;
@@ -16,4 +26,6 @@ export interface ProjectRecord {
   archivePath: string;
   pid?: number;
   createdAt: string;
+  env: Record<string, string>;
+  apiKeys: ProjectApiKey[];
 }

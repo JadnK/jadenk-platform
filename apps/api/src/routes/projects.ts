@@ -13,6 +13,13 @@ import {
   startProjectProcess,
   stopProjectProcess,
 } from "../runtime/process-manager";
+import {
+  createApiKeyId,
+  generateRawApiKey,
+  getApiKeyPreview,
+  hashApiKey,
+} from "../lib/api-keys";
+
 
 export async function projectRoutes(app: FastifyInstance) {
   app.get("/", async () => {
@@ -132,6 +139,7 @@ export async function projectRoutes(app: FastifyInstance) {
       projectPath: finalPath,
       archivePath,
       createdAt: new Date().toISOString(),
+      apiKeys: [],
     };
 
     projects.push(project);
@@ -155,6 +163,72 @@ export async function projectRoutes(app: FastifyInstance) {
 
     return {
       logs: content,
+    };
+  });
+
+  app.get("/:id/keys", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const project = projects.find((p) => p.id === id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    return {
+      keys: project.apiKeys,
+    };
+  });
+
+  app.post("/:id/keys", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body || {}) as { name?: string };
+
+    const project = projects.find((p) => p.id === id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    const rawKey = generateRawApiKey();
+    const apiKey = {
+      id: createApiKeyId(),
+      name: body.name?.trim() || "Default Key",
+      keyPreview: getApiKeyPreview(rawKey),
+      keyHash: hashApiKey(rawKey),
+      createdAt: new Date().toISOString(),
+    };
+
+    project.apiKeys.push(apiKey);
+
+    return reply.status(201).send({
+      message: "API Key erstellt",
+      apiKey: {
+        ...apiKey,
+        rawKey,
+      },
+    });
+  });
+
+  app.post("/:id/keys/:keyId/revoke", async (request, reply) => {
+    const { id, keyId } = request.params as { id: string; keyId: string };
+
+    const project = projects.find((p) => p.id === id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    const apiKey = project.apiKeys.find((item) => item.id === keyId);
+
+    if (!apiKey) {
+      return reply.status(404).send({ error: "API Key nicht gefunden" });
+    }
+
+    apiKey.revokedAt = new Date().toISOString();
+
+    return {
+      message: "API Key widerrufen",
     };
   });
 

@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { projects } from "../lib/project-store";
+import {
+  extractApiKeyFromRequest,
+  hashApiKey,
+} from "../lib/api-keys";
 import { getRunningProcess } from "../runtime/process-manager";
 
 export async function proxyRoutes(app: FastifyInstance) {
@@ -13,6 +17,30 @@ export async function proxyRoutes(app: FastifyInstance) {
         error: "Projekt nicht gefunden",
       });
     }
+
+    const rawApiKey = extractApiKeyFromRequest(
+      request.headers as Record<string, unknown>,
+    );
+
+    if (!rawApiKey) {
+      return reply.status(401).send({
+        error: "API Key fehlt",
+      });
+    }
+
+    const incomingKeyHash = hashApiKey(rawApiKey);
+
+    const matchedKey = project.apiKeys.find(
+      (item) => item.keyHash === incomingKeyHash && !item.revokedAt,
+    );
+
+    if (!matchedKey) {
+      return reply.status(401).send({
+        error: "Ungültiger API Key",
+      });
+    }
+
+    matchedKey.lastUsedAt = new Date().toISOString();
 
     const running = getRunningProcess(project.id);
 
@@ -34,6 +62,8 @@ export async function proxyRoutes(app: FastifyInstance) {
     for (const [key, value] of Object.entries(request.headers)) {
       if (!value) continue;
       if (key.toLowerCase() === "host") continue;
+      if (key.toLowerCase() === "x-api-key") continue;
+      if (key.toLowerCase() === "authorization") continue;
 
       if (Array.isArray(value)) {
         headers.set(key, value.join(", "));
@@ -64,10 +94,7 @@ export async function proxyRoutes(app: FastifyInstance) {
 
       const buffer = Buffer.from(await response.arrayBuffer());
 
-      return reply
-        .code(response.status)
-        .headers(responseHeaders)
-        .send(buffer);
+      return reply.code(response.status).headers(responseHeaders).send(buffer);
     } catch {
       return reply.status(502).send({
         error: "Proxy request fehlgeschlagen",
@@ -85,6 +112,30 @@ export async function proxyRoutes(app: FastifyInstance) {
         error: "Projekt nicht gefunden",
       });
     }
+
+    const rawApiKey = extractApiKeyFromRequest(
+      request.headers as Record<string, unknown>,
+    );
+
+    if (!rawApiKey) {
+      return reply.status(401).send({
+        error: "API Key fehlt",
+      });
+    }
+
+    const incomingKeyHash = hashApiKey(rawApiKey);
+
+    const matchedKey = project.apiKeys.find(
+      (item) => item.keyHash === incomingKeyHash && !item.revokedAt,
+    );
+
+    if (!matchedKey) {
+      return reply.status(401).send({
+        error: "Ungültiger API Key",
+      });
+    }
+
+    matchedKey.lastUsedAt = new Date().toISOString();
 
     const running = getRunningProcess(project.id);
 
@@ -105,6 +156,8 @@ export async function proxyRoutes(app: FastifyInstance) {
     for (const [key, value] of Object.entries(request.headers)) {
       if (!value) continue;
       if (key.toLowerCase() === "host") continue;
+      if (key.toLowerCase() === "x-api-key") continue;
+      if (key.toLowerCase() === "authorization") continue;
 
       if (Array.isArray(value)) {
         headers.set(key, value.join(", "));
@@ -135,10 +188,7 @@ export async function proxyRoutes(app: FastifyInstance) {
 
       const buffer = Buffer.from(await response.arrayBuffer());
 
-      return reply
-        .code(response.status)
-        .headers(responseHeaders)
-        .send(buffer);
+      return reply.code(response.status).headers(responseHeaders).send(buffer);
     } catch {
       return reply.status(502).send({
         error: "Proxy request fehlgeschlagen",

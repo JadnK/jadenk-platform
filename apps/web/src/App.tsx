@@ -7,6 +7,7 @@ import { ProjectsPage } from "./pages/dashboard/projects-page";
 import { NewProjectPage } from "./pages/dashboard/projects/new-project-page";
 import { SettingsPage } from "./pages/dashboard/settings-page";
 import { LoginPage } from "./pages/login-page";
+import { ProjectKeysPage } from "./pages/dashboard/project-keys-page";
 
 export default function App() {
   return (
@@ -45,6 +46,15 @@ export default function App() {
         element={
           <DashboardLayout>
             <DeploymentsPage />
+          </DashboardLayout>
+        }
+      />
+
+      <Route
+        path="/dashboard/keys"
+        element={
+          <DashboardLayout>
+            <ProjectKeysPage />
           </DashboardLayout>
         }
       />
