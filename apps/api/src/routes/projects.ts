@@ -31,7 +31,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const projectList = await getAllProjects();
 
     const withState = await Promise.all(
-      projectList.map(async (project) => {
+      projectList.map(async (project: ProjectRecord) => {
         const state = await readProjectState(project.id);
 
         return {
@@ -111,7 +111,7 @@ export async function projectRoutes(app: FastifyInstance) {
 
     const existingProjects = await getAllProjects();
     const slugExists = existingProjects.some(
-      (project) => project.slug === normalizedSlug,
+      (project: ProjectRecord) => project.slug === normalizedSlug,
     );
 
     if (slugExists) {
@@ -224,7 +224,7 @@ export async function projectRoutes(app: FastifyInstance) {
         project.startCommand,
         project.projectPath,
         project.port,
-        async (projectId, exitCode) => {
+        async (projectId: string, exitCode: number | null) => {
           const currentState = await readProjectState(projectId);
 
           await writeProjectState(projectId, {
@@ -359,7 +359,7 @@ export async function projectRoutes(app: FastifyInstance) {
         project.startCommand,
         project.projectPath,
         project.port,
-        async (projectId, exitCode) => {
+        async (projectId: string, exitCode: number | null) => {
           const currentState = await readProjectState(projectId);
 
           await writeProjectState(projectId, {
