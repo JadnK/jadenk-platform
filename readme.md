@@ -16,3 +16,11 @@ cd in projekt
 pnpm install
 pnpm build
 pnpm run start
+
+
+dann wenn es geht als service:
+jadenk-platform.service -> /etc/systemd/system/jadenk-platform.service cp
+
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl restart jadenk-platform

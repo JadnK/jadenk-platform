@@ -1,0 +1,22 @@
+[Unit]
+Description=jadenk Platform (web + api)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/jadenk-platform
+
+ExecStartPre=/usr/bin/pnpm install
+ExecStartPre=/usr/bin/pnpm build
+
+ExecStart=/usr/bin/pnpm run start
+
+Restart=always
+RestartSec=5
+
+KillSignal=SIGINT
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
