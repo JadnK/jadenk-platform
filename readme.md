@@ -10,3 +10,7 @@ Ohne Key:
 Mit falschem Key:
 { "error": "Ungültiger API Key" }
  
+
+ npm install -g pnpm
+
+ 
