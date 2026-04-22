@@ -5,6 +5,7 @@ import {
 } from "../lib/api-keys";
 import { getProjectBySlug, readProjectConfig, writeProjectConfig } from "../lib/project-config";
 import { getRunningProcess } from "../runtime/process-manager";
+import { env } from "../lib/env";
 
 export async function proxyRoutes(app: FastifyInstance) {
   app.all("/v1/:slug/*", async (request, reply) => {
@@ -65,7 +66,7 @@ export async function proxyRoutes(app: FastifyInstance) {
       ? `?${request.url.split("?")[1]}`
       : "";
 
-    const targetUrl = `http://127.0.0.1:${project.port}/${wildcard}${queryString}`;
+    const targetUrl = `http://${env}:${project.port}/${wildcard}${queryString}`;
 
     const headers = new Headers();
 
@@ -169,7 +170,7 @@ export async function proxyRoutes(app: FastifyInstance) {
       ? `?${request.url.split("?")[1]}`
       : "";
 
-    const targetUrl = `http://127.0.0.1:${project.port}/${queryString}`;
+    const targetUrl = `http://${env}:${project.port}/${queryString}`;
 
     const headers = new Headers();
 

@@ -43,21 +43,6 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
-
-      <div className="border-t border-zinc-800 p-4">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-          <p className="mt-1 text-sm text-zinc-400">
-        Lade ein neues API-Projekt hoch und deploye es direkt.
-          </p>
-
-            <Link
-            to="/dashboard/projects/new"
-            className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
-            >
-            Neues Projekt
-            </Link>
-        </div>
-      </div>
     </aside>
   );
 }
