@@ -1,3 +1,3 @@
 export const env = {
-  apiUrl: "http://localhost:4000",
+  apiUrl: "http://api.jadenk.de/",
 };
