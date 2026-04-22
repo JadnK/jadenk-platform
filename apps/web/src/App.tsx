@@ -1,13 +1,13 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { AuthGuard } from "./components/auth-guard";
 import { DashboardLayout } from "./layouts/dashboard-layout";
 import { DeploymentsPage } from "./pages/dashboard/deployments-page";
 import { LogsPage } from "./pages/dashboard/logs-page";
 import { OverviewPage } from "./pages/dashboard/overview-page";
-import { ProjectsPage } from "./pages/dashboard/projects-page";
 import { NewProjectPage } from "./pages/dashboard/projects/new-project-page";
-import { SettingsPage } from "./pages/dashboard/settings-page";
-import { LoginPage } from "./pages/login-page";
+import { ProjectsPage } from "./pages/dashboard/projects-page";
 import { ProjectKeysPage } from "./pages/dashboard/project-keys-page";
+import { LoginPage } from "./pages/login-page";
 
 export default function App() {
   return (
@@ -17,63 +17,66 @@ export default function App() {
       <Route
         path="/dashboard"
         element={
-          <DashboardLayout>
-            <OverviewPage />
-          </DashboardLayout>
+          <AuthGuard>
+            <DashboardLayout>
+              <OverviewPage />
+            </DashboardLayout>
+          </AuthGuard>
         }
       />
 
       <Route
         path="/dashboard/projects"
         element={
-          <DashboardLayout>
-            <ProjectsPage />
-          </DashboardLayout>
+          <AuthGuard>
+            <DashboardLayout>
+              <ProjectsPage />
+            </DashboardLayout>
+          </AuthGuard>
         }
       />
 
       <Route
         path="/dashboard/projects/new"
         element={
-          <DashboardLayout>
-            <NewProjectPage />
-          </DashboardLayout>
+          <AuthGuard>
+            <DashboardLayout>
+              <NewProjectPage />
+            </DashboardLayout>
+          </AuthGuard>
         }
       />
 
       <Route
         path="/dashboard/deployments"
         element={
-          <DashboardLayout>
-            <DeploymentsPage />
-          </DashboardLayout>
+          <AuthGuard>
+            <DashboardLayout>
+              <DeploymentsPage />
+            </DashboardLayout>
+          </AuthGuard>
         }
       />
 
       <Route
         path="/dashboard/keys"
         element={
-          <DashboardLayout>
-            <ProjectKeysPage />
-          </DashboardLayout>
+          <AuthGuard>
+            <DashboardLayout>
+              <ProjectKeysPage />
+            </DashboardLayout>
+          </AuthGuard>
         }
       />
 
       <Route
         path="/dashboard/logs"
         element={
-          <DashboardLayout>
-            <LogsPage />
-          </DashboardLayout>
-        }
-      />
-
-      <Route
-        path="/dashboard/settings"
-        element={
-          <DashboardLayout>
-            <SettingsPage />
-          </DashboardLayout>
+          <AuthGuard>
+            <DashboardLayout>
+              <LogsPage />
+            </DashboardLayout>
+          </AuthGuard>
         }
       />
 

@@ -6,6 +6,7 @@ import { runtimePaths } from "../lib/runtime-paths";
 import { createProjectId, normalizeSlug } from "../lib/project-utils";
 import type { ProjectRecord, ProjectRuntime } from "../types/project";
 import { runCommand } from "../runtime/command-runner";
+import { requireAuth } from "../plugins/auth";
 import {
   getRunningProcess,
   startProjectProcess,
@@ -27,6 +28,7 @@ import {
 } from "../lib/api-keys";
 
 export async function projectRoutes(app: FastifyInstance) {
+  app.addHook("preHandler", requireAuth);
   app.get("/", async () => {
     const projectList = await getAllProjects();
 

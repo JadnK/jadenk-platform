@@ -24,3 +24,6 @@ jadenk-platform.service -> /etc/systemd/system/jadenk-platform.service cp
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl restart jadenk-platform
+
+für logs:
+journalctl -u jadenk-platform -f 

@@ -6,7 +6,6 @@ const navItems = [
   { to: "/dashboard/deployments", label: "Deployments" },
   { to: "/dashboard/keys", label: "API Keys" },
   { to: "/dashboard/logs", label: "Logs" },
-  { to: "/dashboard/settings", label: "Settings" },
 ];
 
 export function Sidebar() {

@@ -9,7 +9,8 @@ export default defineConfig({
     host: true, 
     allowedHosts: [
       ".jadenk.de",
-      "jadenk.de"
+      "jadenk.de",
+      "127.0.0.1"
     ],
   },
 });

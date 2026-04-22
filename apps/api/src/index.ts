@@ -1,14 +1,21 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import cookie from "@fastify/cookie";
 import { projectRoutes } from "./routes/projects";
 import { proxyRoutes } from "./routes/proxy";
 import { bootstrapProjects } from "./runtime/bootstrap-projects";
+import { authRoutes } from "./routes/auth";
+import { ensureAuthConfig, getInitialCredentials } from "./lib/auth-config";
 
 async function main() {
+  await ensureAuthConfig();
+
   const app = Fastify({
     logger: true,
   });
+
+  await app.register(cookie);
 
   await app.register(cors, {
     origin: true,
@@ -32,6 +39,20 @@ async function main() {
     return {
       message: "Hallo von der API 👋",
     };
+  });
+
+  app.get("/auth/bootstrap", async () => {
+    const creds = getInitialCredentials();
+
+    return {
+      username: creds.username,
+      initialPassword: creds.password,
+      note: "Nur für Setup/Development gedacht.",
+    };
+  });
+
+  await app.register(authRoutes, {
+    prefix: "/auth",
   });
 
   await app.register(projectRoutes, {
