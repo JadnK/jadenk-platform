@@ -24,7 +24,7 @@ export function startProjectProcess(
     shell: true,
     env: {
       ...process.env,
-      PORT: String(port),
+      PORT: String(port)
     },
   });
 

@@ -1,8 +1,9 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
-import { proxyRoutes } from "./routes/proxy";
 import { projectRoutes } from "./routes/projects";
+import { proxyRoutes } from "./routes/proxy";
+import { bootstrapProjects } from "./runtime/bootstrap-projects";
 
 const app = Fastify({
   logger: true,
@@ -13,7 +14,11 @@ await app.register(cors, {
   credentials: true,
 });
 
-await app.register(multipart);
+await app.register(multipart, {
+  limits: {
+    fileSize: 1024 * 1024 * 100,
+  },
+});
 
 app.get("/health", async () => {
   return {
@@ -36,6 +41,8 @@ await app.register(proxyRoutes);
 
 const start = async () => {
   try {
+    await bootstrapProjects();
+
     await app.listen({
       host: "0.0.0.0",
       port: 4000,

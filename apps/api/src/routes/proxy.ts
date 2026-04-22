@@ -1,16 +1,16 @@
 import type { FastifyInstance } from "fastify";
-import { projects } from "../lib/project-store";
 import {
   extractApiKeyFromRequest,
   hashApiKey,
 } from "../lib/api-keys";
+import { getProjectBySlug, readProjectConfig, writeProjectConfig } from "../lib/project-config";
 import { getRunningProcess } from "../runtime/process-manager";
 
 export async function proxyRoutes(app: FastifyInstance) {
   app.all("/v1/:slug/*", async (request, reply) => {
     const { slug } = request.params as { slug: string };
 
-    const project = projects.find((item) => item.slug === slug);
+    const project = await getProjectBySlug(slug);
 
     if (!project) {
       return reply.status(404).send({
@@ -30,7 +30,7 @@ export async function proxyRoutes(app: FastifyInstance) {
 
     const incomingKeyHash = hashApiKey(rawApiKey);
 
-    const matchedKey = project.apiKeys.find(
+    const matchedKey = (project.apiKeys ?? []).find(
       (item) => item.keyHash === incomingKeyHash && !item.revokedAt,
     );
 
@@ -41,6 +41,16 @@ export async function proxyRoutes(app: FastifyInstance) {
     }
 
     matchedKey.lastUsedAt = new Date().toISOString();
+
+    const persistedProject = await readProjectConfig(project.id);
+    if (persistedProject) {
+      persistedProject.apiKeys = persistedProject.apiKeys.map((item) =>
+        item.id === matchedKey.id
+          ? { ...item, lastUsedAt: matchedKey.lastUsedAt }
+          : item,
+      );
+      await writeProjectConfig(persistedProject);
+    }
 
     const running = getRunningProcess(project.id);
 
@@ -105,7 +115,7 @@ export async function proxyRoutes(app: FastifyInstance) {
   app.all("/v1/:slug", async (request, reply) => {
     const { slug } = request.params as { slug: string };
 
-    const project = projects.find((item) => item.slug === slug);
+    const project = await getProjectBySlug(slug);
 
     if (!project) {
       return reply.status(404).send({
@@ -125,7 +135,7 @@ export async function proxyRoutes(app: FastifyInstance) {
 
     const incomingKeyHash = hashApiKey(rawApiKey);
 
-    const matchedKey = project.apiKeys.find(
+    const matchedKey = (project.apiKeys ?? []).find(
       (item) => item.keyHash === incomingKeyHash && !item.revokedAt,
     );
 
@@ -136,6 +146,16 @@ export async function proxyRoutes(app: FastifyInstance) {
     }
 
     matchedKey.lastUsedAt = new Date().toISOString();
+
+    const persistedProject = await readProjectConfig(project.id);
+    if (persistedProject) {
+      persistedProject.apiKeys = persistedProject.apiKeys.map((item) =>
+        item.id === matchedKey.id
+          ? { ...item, lastUsedAt: matchedKey.lastUsedAt }
+          : item,
+      );
+      await writeProjectConfig(persistedProject);
+    }
 
     const running = getRunningProcess(project.id);
 

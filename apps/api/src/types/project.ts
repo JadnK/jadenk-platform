@@ -26,6 +26,6 @@ export interface ProjectRecord {
   archivePath: string;
   pid?: number;
   createdAt: string;
-  env: Record<string, string>;
   apiKeys: ProjectApiKey[];
+  autoStart: boolean;
 }

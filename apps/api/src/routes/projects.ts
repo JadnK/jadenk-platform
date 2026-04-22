@@ -1,12 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { projects } from "../lib/project-store";
 import { ensureDir, extractZip, saveBufferToFile } from "../lib/project-files";
 import { runtimePaths } from "../lib/runtime-paths";
 import { createProjectId, normalizeSlug } from "../lib/project-utils";
 import type { ProjectRecord, ProjectRuntime } from "../types/project";
-import { startProjectProcess } from "../runtime/process-manager";
 import { runCommand } from "../runtime/command-runner";
 import {
   getRunningProcess,
@@ -14,17 +12,38 @@ import {
   stopProjectProcess,
 } from "../runtime/process-manager";
 import {
+  getAllProjects,
+  getProjectById,
+  readProjectConfig,
+  readProjectState,
+  writeProjectConfig,
+  writeProjectState,
+} from "../lib/project-config";
+import {
   createApiKeyId,
   generateRawApiKey,
   getApiKeyPreview,
   hashApiKey,
 } from "../lib/api-keys";
 
-
 export async function projectRoutes(app: FastifyInstance) {
   app.get("/", async () => {
+    const projectList = await getAllProjects();
+
+    const withState = await Promise.all(
+      projectList.map(async (project) => {
+        const state = await readProjectState(project.id);
+
+        return {
+          ...project,
+          status: state?.status ?? "stopped",
+          pid: state?.pid ?? undefined,
+        };
+      }),
+    );
+
     return {
-      projects,
+      projects: withState,
     };
   });
 
@@ -90,7 +109,11 @@ export async function projectRoutes(app: FastifyInstance) {
       });
     }
 
-    const slugExists = projects.some((project) => project.slug === normalizedSlug);
+    const existingProjects = await getAllProjects();
+    const slugExists = existingProjects.some(
+      (project) => project.slug === normalizedSlug,
+    );
+
     if (slugExists) {
       return reply.status(409).send({
         error: "Slug existiert bereits",
@@ -140,9 +163,17 @@ export async function projectRoutes(app: FastifyInstance) {
       archivePath,
       createdAt: new Date().toISOString(),
       apiKeys: [],
+      autoStart: true,
     };
 
-    projects.push(project);
+    await writeProjectConfig(project);
+    await writeProjectState(project.id, {
+      status: "stopped",
+      pid: null,
+      lastStartedAt: null,
+      lastStoppedAt: null,
+      lastError: null,
+    });
 
     return reply.status(201).send({
       message: "Projekt erstellt",
@@ -150,92 +181,10 @@ export async function projectRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get("/:id/logs", async (request) => {
-    const { id } = request.params as { id: string };
-
-    const logPath = path.join(runtimePaths.logsRoot, `${id}.log`);
-
-    if (!fs.existsSync(logPath)) {
-      return { logs: "" };
-    }
-
-    const content = await fs.promises.readFile(logPath, "utf-8");
-
-    return {
-      logs: content,
-    };
-  });
-
-  app.get("/:id/keys", async (request, reply) => {
-    const { id } = request.params as { id: string };
-
-    const project = projects.find((p) => p.id === id);
-
-    if (!project) {
-      return reply.status(404).send({ error: "Projekt nicht gefunden" });
-    }
-
-    return {
-      keys: project.apiKeys,
-    };
-  });
-
-  app.post("/:id/keys", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const body = (request.body || {}) as { name?: string };
-
-    const project = projects.find((p) => p.id === id);
-
-    if (!project) {
-      return reply.status(404).send({ error: "Projekt nicht gefunden" });
-    }
-
-    const rawKey = generateRawApiKey();
-    const apiKey = {
-      id: createApiKeyId(),
-      name: body.name?.trim() || "Default Key",
-      keyPreview: getApiKeyPreview(rawKey),
-      keyHash: hashApiKey(rawKey),
-      createdAt: new Date().toISOString(),
-    };
-
-    project.apiKeys.push(apiKey);
-
-    return reply.status(201).send({
-      message: "API Key erstellt",
-      apiKey: {
-        ...apiKey,
-        rawKey,
-      },
-    });
-  });
-
-  app.post("/:id/keys/:keyId/revoke", async (request, reply) => {
-    const { id, keyId } = request.params as { id: string; keyId: string };
-
-    const project = projects.find((p) => p.id === id);
-
-    if (!project) {
-      return reply.status(404).send({ error: "Projekt nicht gefunden" });
-    }
-
-    const apiKey = project.apiKeys.find((item) => item.id === keyId);
-
-    if (!apiKey) {
-      return reply.status(404).send({ error: "API Key nicht gefunden" });
-    }
-
-    apiKey.revokedAt = new Date().toISOString();
-
-    return {
-      message: "API Key widerrufen",
-    };
-  });
-
   app.post("/:id/start", async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const project = projects.find((p) => p.id === id);
+    const project = await readProjectConfig(id);
 
     if (!project) {
       return reply.status(404).send({ error: "Projekt nicht gefunden" });
@@ -258,7 +207,13 @@ export async function projectRoutes(app: FastifyInstance) {
         { flag: "a" },
       );
 
-      project.status = "building";
+      await writeProjectState(project.id, {
+        status: "building",
+        pid: null,
+        lastStartedAt: null,
+        lastStoppedAt: null,
+        lastError: null,
+      });
 
       if (project.installCommand.trim()) {
         await runCommand(project.installCommand, project.projectPath, logPath);
@@ -269,24 +224,39 @@ export async function projectRoutes(app: FastifyInstance) {
         project.startCommand,
         project.projectPath,
         project.port,
-        (projectId, exitCode) => {
-          const currentProject = projects.find((p) => p.id === projectId);
-          if (!currentProject) return;
+        async (projectId, exitCode) => {
+          const currentState = await readProjectState(projectId);
 
-          currentProject.pid = undefined;
-          currentProject.status = exitCode === 0 ? "stopped" : "failed";
+          await writeProjectState(projectId, {
+            status: exitCode === 0 ? "stopped" : "failed",
+            pid: null,
+            lastStartedAt: currentState?.lastStartedAt ?? null,
+            lastStoppedAt: new Date().toISOString(),
+            lastError: exitCode === 0 ? null : `Process exited with code ${exitCode}`,
+          });
         },
       );
 
-      project.pid = child.pid;
-      project.status = "running";
+      await writeProjectState(project.id, {
+        status: "running",
+        pid: child.pid ?? null,
+        lastStartedAt: new Date().toISOString(),
+        lastStoppedAt: null,
+        lastError: null,
+      });
 
       return {
         message: "Projekt gestartet",
         pid: child.pid,
       };
     } catch (err) {
-      project.status = "failed";
+      await writeProjectState(project.id, {
+        status: "failed",
+        pid: null,
+        lastStartedAt: null,
+        lastStoppedAt: null,
+        lastError: err instanceof Error ? err.message : "Unknown error",
+      });
 
       await fs.promises.writeFile(
         logPath,
@@ -300,5 +270,242 @@ export async function projectRoutes(app: FastifyInstance) {
         error: err instanceof Error ? err.message : "Start fehlgeschlagen",
       });
     }
+  });
+
+  app.post("/:id/stop", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const project = await readProjectConfig(id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    const stopped = stopProjectProcess(project.id);
+
+    if (!stopped) {
+      return reply.status(409).send({
+        error: "Projekt läuft nicht",
+      });
+    }
+
+    const currentState = await readProjectState(project.id);
+
+    await writeProjectState(project.id, {
+      status: "stopped",
+      pid: null,
+      lastStartedAt: currentState?.lastStartedAt ?? null,
+      lastStoppedAt: new Date().toISOString(),
+      lastError: null,
+    });
+
+    const logPath = path.join(runtimePaths.logsRoot, `${project.id}.log`);
+    await fs.promises.writeFile(logPath, `\n[STOP] project stopped manually\n`, {
+      flag: "a",
+    });
+
+    return {
+      message: "Projekt gestoppt",
+    };
+  });
+
+  app.post("/:id/restart", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const project = await readProjectConfig(id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    const running = getRunningProcess(project.id);
+    if (running) {
+      stopProjectProcess(project.id);
+
+      const currentState = await readProjectState(project.id);
+
+      await writeProjectState(project.id, {
+        status: "stopped",
+        pid: null,
+        lastStartedAt: currentState?.lastStartedAt ?? null,
+        lastStoppedAt: new Date().toISOString(),
+        lastError: null,
+      });
+    }
+
+    const logPath = path.join(runtimePaths.logsRoot, `${project.id}.log`);
+
+    try {
+      await fs.promises.writeFile(
+        logPath,
+        `\n[RESTART] project=${project.name} (${project.id})\n`,
+        { flag: "a" },
+      );
+
+      await writeProjectState(project.id, {
+        status: "building",
+        pid: null,
+        lastStartedAt: null,
+        lastStoppedAt: null,
+        lastError: null,
+      });
+
+      if (project.installCommand.trim()) {
+        await runCommand(project.installCommand, project.projectPath, logPath);
+      }
+
+      const child = startProjectProcess(
+        project.id,
+        project.startCommand,
+        project.projectPath,
+        project.port,
+        async (projectId, exitCode) => {
+          const currentState = await readProjectState(projectId);
+
+          await writeProjectState(projectId, {
+            status: exitCode === 0 ? "stopped" : "failed",
+            pid: null,
+            lastStartedAt: currentState?.lastStartedAt ?? null,
+            lastStoppedAt: new Date().toISOString(),
+            lastError: exitCode === 0 ? null : `Process exited with code ${exitCode}`,
+          });
+        },
+      );
+
+      await writeProjectState(project.id, {
+        status: "running",
+        pid: child.pid ?? null,
+        lastStartedAt: new Date().toISOString(),
+        lastStoppedAt: null,
+        lastError: null,
+      });
+
+      return {
+        message: "Projekt neugestartet",
+        pid: child.pid,
+      };
+    } catch (err) {
+      await writeProjectState(project.id, {
+        status: "failed",
+        pid: null,
+        lastStartedAt: null,
+        lastStoppedAt: null,
+        lastError: err instanceof Error ? err.message : "Unknown error",
+      });
+
+      await fs.promises.writeFile(
+        logPath,
+        `\n[RESTART_FAILED] ${
+          err instanceof Error ? err.message : "Unknown error"
+        }\n`,
+        { flag: "a" },
+      );
+
+      return reply.status(500).send({
+        error: err instanceof Error ? err.message : "Restart fehlgeschlagen",
+      });
+    }
+  });
+
+  app.get("/:id/logs", async (request) => {
+    const { id } = request.params as { id: string };
+
+    const logPath = path.join(runtimePaths.logsRoot, `${id}.log`);
+
+    if (!fs.existsSync(logPath)) {
+      return { logs: "" };
+    }
+
+    const content = await fs.promises.readFile(logPath, "utf-8");
+
+    return {
+      logs: content,
+    };
+  });
+
+  app.get("/:id/keys", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const project = await readProjectConfig(id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    return {
+      keys: Array.isArray(project.apiKeys) ? project.apiKeys : [],
+    };
+  });
+
+  app.post("/:id/keys", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body || {}) as { name?: string };
+
+    const project = await readProjectConfig(id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    if (!Array.isArray(project.apiKeys)) {
+      project.apiKeys = [];
+    }
+
+    const rawKey = generateRawApiKey();
+    const apiKey = {
+      id: createApiKeyId(),
+      name: body.name?.trim() || "Default Key",
+      keyPreview: getApiKeyPreview(rawKey),
+      keyHash: hashApiKey(rawKey),
+      createdAt: new Date().toISOString(),
+    };
+
+    project.apiKeys.push(apiKey);
+    await writeProjectConfig(project);
+
+    return reply.status(201).send({
+      message: "API Key erstellt",
+      apiKey: {
+        ...apiKey,
+        rawKey,
+      },
+    });
+  });
+
+  app.post("/:id/keys/:keyId/revoke", async (request, reply) => {
+    const { id, keyId } = request.params as { id: string; keyId: string };
+
+    const project = await readProjectConfig(id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    const apiKey = (project.apiKeys ?? []).find((item) => item.id === keyId);
+
+    if (!apiKey) {
+      return reply.status(404).send({ error: "API Key nicht gefunden" });
+    }
+
+    apiKey.revokedAt = new Date().toISOString();
+    await writeProjectConfig(project);
+
+    return {
+      message: "API Key widerrufen",
+    };
+  });
+
+  app.get("/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const project = await getProjectById(id);
+
+    if (!project) {
+      return reply.status(404).send({ error: "Projekt nicht gefunden" });
+    }
+
+    return {
+      project,
+    };
   });
 }
