@@ -12,5 +12,7 @@ Mit falschem Key:
  
 
  npm install -g pnpm
-
- 
+cd in projekt
+pnpm install
+pnpm build
+pnpm run start
