@@ -42,11 +42,11 @@ export async function authRoutes(app: FastifyInstance) {
     const session = createSession(config.username);
 
     reply.setCookie("session_id", session.id, {
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: true,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return {
