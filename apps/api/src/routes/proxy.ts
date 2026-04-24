@@ -66,7 +66,7 @@ export async function proxyRoutes(app: FastifyInstance) {
       ? `?${request.url.split("?")[1]}`
       : "";
 
-    const targetUrl = `http://${env}:${project.port}/${wildcard}${queryString}`;
+    const targetUrl = `http://127.0.0.1:${project.port}/${wildcard}${queryString}`;
 
     const headers = new Headers();
 
@@ -170,7 +170,7 @@ export async function proxyRoutes(app: FastifyInstance) {
       ? `?${request.url.split("?")[1]}`
       : "";
 
-    const targetUrl = `http://${env.apiUrl}:${project.port}/${queryString}`;
+    const targetUrl = `${env.apiUrl}:${project.port}/${queryString}`;
 
     const headers = new Headers();
 
