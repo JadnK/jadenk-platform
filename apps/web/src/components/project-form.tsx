@@ -38,10 +38,11 @@ export function ProjectForm() {
       formData.append("description", description);
       formData.append("file", file);
 
-      const response = await fetch(`${env.apiUrl}/projects`, {
-        method: "POST",
-        body: formData,
-      });
+    const response = await fetch(`${env.apiUrl}/projects`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
 
       const data = await response.json();
 
