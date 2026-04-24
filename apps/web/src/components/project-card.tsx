@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { RuntimeBadge } from "./runtime-badge";
 import { StatusBadge } from "./status-badge";
 import type { ProjectItem } from "../types/project";
+import { env } from "../lib/env";
 
 interface ProjectCardProps {
   project: ProjectItem;
@@ -63,7 +64,7 @@ export function ProjectCard({
           Public URL
         </p>
         <p className="mt-2 break-all text-sm text-zinc-300">
-          http://localhost:4000/v1/{project.slug}
+          {env.apiUrl}/v1/{project.slug}
         </p>
       </div>
 

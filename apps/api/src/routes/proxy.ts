@@ -170,7 +170,7 @@ export async function proxyRoutes(app: FastifyInstance) {
       ? `?${request.url.split("?")[1]}`
       : "";
 
-    const targetUrl = `http://${env}:${project.port}/${queryString}`;
+    const targetUrl = `http://${env.apiUrl}:${project.port}/${queryString}`;
 
     const headers = new Headers();
 

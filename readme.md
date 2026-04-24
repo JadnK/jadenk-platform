@@ -27,3 +27,5 @@ sudo systemctl restart jadenk-platform
 
 für logs:
 journalctl -u jadenk-platform -f 
+
+muss https sein
