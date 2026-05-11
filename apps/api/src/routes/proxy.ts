@@ -12,8 +12,6 @@ import { getRunningProcess } from "../runtime/process-manager";
 
 const BLOCKED_PROXY_HEADERS = new Set([
   "host",
-  "x-api-key",
-  "authorization",
   "content-length",
   "transfer-encoding",
   "connection",
