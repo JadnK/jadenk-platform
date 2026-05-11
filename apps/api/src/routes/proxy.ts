@@ -103,6 +103,9 @@ export async function proxyRoutes(app: FastifyInstance) {
         responseHeaders[key] = value;
       });
 
+      headers.delete("content-length");
+      headers.delete("host");
+
       const buffer = Buffer.from(await response.arrayBuffer());
 
       return reply.code(response.status).headers(responseHeaders).send(buffer);
@@ -170,7 +173,7 @@ export async function proxyRoutes(app: FastifyInstance) {
       ? `?${request.url.split("?")[1]}`
       : "";
 
-    const targetUrl = `${env.apiUrl}:${project.port}/${queryString}`;
+    const targetUrl = `http://127.0.0.1:${project.port}/${queryString}`;
 
     const headers = new Headers();
 
