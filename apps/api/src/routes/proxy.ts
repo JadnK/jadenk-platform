@@ -10,7 +10,7 @@ import {
 } from "../lib/project-config";
 import { getRunningProcess } from "../runtime/process-manager";
 
-const HOP_BY_HOP_HEADERS = new Set([
+const BLOCKED_PROXY_HEADERS = new Set([
   "host",
   "x-api-key",
   "authorization",
@@ -32,7 +32,7 @@ function buildProxyHeaders(request: FastifyRequest): Headers {
     const lowerKey = key.toLowerCase();
 
     if (!value) continue;
-    if (HOP_BY_HOP_HEADERS.has(lowerKey)) continue;
+    if (BLOCKED_PROXY_HEADERS.has(lowerKey)) continue;
 
     if (Array.isArray(value)) {
       headers.set(key, value.join(", "));
@@ -47,7 +47,7 @@ function buildProxyHeaders(request: FastifyRequest): Headers {
 function buildProxyBody(
   request: FastifyRequest,
   headers: Headers,
-): BodyInit | undefined {
+): string | undefined {
   if (request.method === "GET" || request.method === "HEAD") {
     return undefined;
   }
@@ -56,15 +56,7 @@ function buildProxyBody(
     return undefined;
   }
 
-  if (Buffer.isBuffer(request.body)) {
-    return request.body;
-  }
-
   if (typeof request.body === "string") {
-    return request.body;
-  }
-
-  if (request.body instanceof URLSearchParams) {
     return request.body;
   }
 
@@ -84,7 +76,6 @@ function sanitizeResponseHeaders(response: Response): Record<string, string> {
 
     if (lowerKey === "transfer-encoding") return;
     if (lowerKey === "connection") return;
-    if (lowerKey === "content-encoding") return;
 
     responseHeaders[key] = value;
   });
